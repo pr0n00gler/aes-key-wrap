@@ -1,0 +1,23 @@
+[package]
+name = "aes-key-wrap-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+rust-version = "1.87"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+aes-key-wrap = { path = ".." }
+libfuzzer-sys = "0.4.13"
+
+[[bin]]
+name = "api"
+path = "fuzz_targets/api.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
+members = ["."]

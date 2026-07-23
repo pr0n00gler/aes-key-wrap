@@ -1,0 +1,37 @@
+name: Dependency security
+
+on:
+  push:
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - fuzz/Cargo.toml
+      - fuzz/Cargo.lock
+      - .github/workflows/security.yml
+  pull_request:
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - fuzz/Cargo.toml
+      - fuzz/Cargo.lock
+      - .github/workflows/security.yml
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: RustSec advisory audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo install cargo-audit --locked --version 0.22.2
+      - name: Audit package dependencies
+        run: cargo audit --deny warnings
+      - name: Audit fuzz dependencies
+        run: cargo audit --deny warnings
+        working-directory: fuzz

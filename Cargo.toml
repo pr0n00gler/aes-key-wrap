@@ -1,0 +1,16 @@
+[package]
+name = "aes-key-wrap"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.87"
+publish = false
+
+[dependencies]
+aes = { version = "0.9.1", features = ["zeroize"] }
+subtle = "2.6.1"
+zeroize = "1.9.0"
+
+[dev-dependencies]
+aes-kw = { version = "0.3.1", default-features = false }
+proptest = { version = "1.11.0", default-features = false, features = ["std"] }
+wycheproof = { version = "0.6.0", default-features = false, features = ["keywrap"] }
