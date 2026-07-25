@@ -1,5 +1,6 @@
 [package]
 name = "aes-key-wrap"
+description = "Pure Rust implementation of Advanced Encryption Standard (AES) Key Wrap Algorithm (RFC-3394)"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.87"
