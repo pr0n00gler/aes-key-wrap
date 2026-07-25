@@ -1,6 +1,6 @@
 #![no_main]
 
-use aes_key_wrap::{Error, unwrap_key, wrap_key};
+use aes_key_wrap::{Error, KeyWrapMode, unwrap_key, wrap_key};
 use libfuzzer_sys::fuzz_target;
 
 const MAX_INPUT_LEN: usize = 4096;
@@ -25,19 +25,30 @@ fuzz_target!(|input: &[u8]| {
                 .unwrap_or((index as u8).wrapping_mul(17))
         })
         .collect();
+    let mode = if selector & 0b100 == 0 {
+        KeyWrapMode::Rfc3394
+    } else {
+        KeyWrapMode::Rfc5649
+    };
 
-    exercise_wrap(&kek, remainder);
-    exercise_unwrap(&kek, remainder);
+    exercise_wrap(mode, &kek, remainder);
+    exercise_unwrap(mode, &kek, remainder);
 });
 
-fn exercise_wrap(kek: &[u8], plaintext: &[u8]) {
-    let mut ciphertext = vec![SENTINEL; plaintext.len() + 8];
-    match wrap_key(kek, plaintext, &mut ciphertext) {
+fn exercise_wrap(mode: KeyWrapMode, kek: &[u8], plaintext: &[u8]) {
+    let ciphertext_len = match mode {
+        KeyWrapMode::Rfc3394 => plaintext.len() + 8,
+        KeyWrapMode::Rfc5649 => plaintext.len().div_ceil(8) * 8 + 8,
+    };
+    let mut ciphertext = vec![SENTINEL; ciphertext_len];
+    match wrap_key(mode, kek, plaintext, &mut ciphertext) {
         Ok(()) => {
-            let mut recovered = vec![SENTINEL; plaintext.len()];
-            unwrap_key(kek, &ciphertext, &mut recovered)
+            let mut recovered = vec![SENTINEL; ciphertext.len() - 8];
+            let plaintext_len = unwrap_key(mode, kek, &ciphertext, &mut recovered)
                 .expect("every successfully wrapped value must unwrap");
-            assert_eq!(recovered, plaintext);
+            assert_eq!(plaintext_len, plaintext.len());
+            assert_eq!(&recovered[..plaintext_len], plaintext);
+            assert!(recovered[plaintext_len..].iter().all(|byte| *byte == 0));
         }
         Err(_) => assert!(
             ciphertext.iter().all(|byte| *byte == SENTINEL),
@@ -46,12 +57,13 @@ fn exercise_wrap(kek: &[u8], plaintext: &[u8]) {
     }
 }
 
-fn exercise_unwrap(kek: &[u8], ciphertext: &[u8]) {
+fn exercise_unwrap(mode: KeyWrapMode, kek: &[u8], ciphertext: &[u8]) {
     let mut plaintext = vec![SENTINEL; ciphertext.len().saturating_sub(8)];
-    match unwrap_key(kek, ciphertext, &mut plaintext) {
-        Ok(()) => {
+    match unwrap_key(mode, kek, ciphertext, &mut plaintext) {
+        Ok(plaintext_len) => {
+            assert!(plaintext[plaintext_len..].iter().all(|byte| *byte == 0));
             let mut rewrapped = vec![SENTINEL; ciphertext.len()];
-            wrap_key(kek, &plaintext, &mut rewrapped)
+            wrap_key(mode, kek, &plaintext[..plaintext_len], &mut rewrapped)
                 .expect("every successfully unwrapped value must wrap");
             assert_eq!(rewrapped, ciphertext);
         }
