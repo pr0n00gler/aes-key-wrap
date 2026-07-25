@@ -3,7 +3,8 @@ name = "aes-key-wrap"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.87"
-publish = false
+repository = "https://github.com/pr0n00gler/aes-key-wrap"
+license = "MIT"
 
 [dependencies]
 aes = { version = "0.9.1", features = ["zeroize"] }
